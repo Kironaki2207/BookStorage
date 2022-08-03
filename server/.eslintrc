@@ -1,0 +1,24 @@
+{
+    "root": true,
+    "parserOptions": {
+        "ecmaVersion": "latest"
+    },
+    "env": {
+        "node": true,
+        "jest": true,
+        "es6": true
+    },
+    "plugins": [
+        "prettier",
+        "sonarjs"
+    ],
+    "extends": [
+        "plugin:prettier/recommended",
+        "plugin:sonarjs/recommended"
+    ],
+    "rules": {
+        "prettier/prettier": "error",
+        "camelcase": 0,
+        "strict" :"off"
+    }
+}
