@@ -1,4 +1,4 @@
-const bcrypt = require('bcryptjs')
+const crypto = require('crypto')
 const jwt = require('jsonwebtoken')
 const {UserService} = require('../services/user.service')
 const schema = require('../shemas/user')
@@ -14,13 +14,19 @@ module.exports = async function (fastify) {
       if (await userService.findBy('email', request.body.email)) {
         throw {statusCode: 201, message: 'incorrect email'}
       }
+      //const salt = await bcrypt.genSalt(10)
+      //const hash = await bcrypt.hash(request.body.password, salt)
 
-      const salt = await bcrypt.genSalt(10)
-      const hash = await bcrypt.hash(request.body.password, salt)
+      const salt = crypto.randomBytes(128).toString('base64') // length = 172
+      const hash = crypto
+        .createHash('sha512')
+        .update(request.body.password)
+        .digest('hex')
+
       const user = await userService.add(
         request.body.username,
         request.body.email,
-        hash
+        hash + salt
       )
       reply.send(user)
     },
@@ -34,8 +40,13 @@ module.exports = async function (fastify) {
       if (!user) {
         throw {statusCode: 201, message: 'incorrect email'}
       }
-      const isMatch = await bcrypt.compare(request.body.password, user.password)
-      if (isMatch) {
+      let password = user.password.slice(0, -172)
+      const hash = crypto
+        .createHash('sha512')
+        .update(request.body.password)
+        .digest('hex')
+      //const isMatch = await bcrypt.compare(request.body.password, user.password)
+      if (hash == password) {
         const payload = {
           id: user.id,
           name: user.username,
