@@ -29,15 +29,16 @@ module.exports = async function (fastify) {
       reply.send(user)
     },
   })
+
   fastify.route({
     method: 'PATCH',
-    path: '/users/:userId',
+    path: '/users/avatar/:userId',
+    schema: schema.addAvatar,
     handler: async (request, reply) => {
       const data = await request.file()
       const {userId} = request.params
-      url = await fileService.CreateSile(data.fieldname, data.file)
-      await userService.edit(userId, url, data.fieldname)
-      const user = await userService.findById(userId)
+      url = await fileService.CreateFile(data.fieldname, data.file)
+      const user = await userService.edit(userId, url, data.fieldname)
       reply.send(user)
     },
   })
