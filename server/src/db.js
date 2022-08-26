@@ -1,6 +1,7 @@
 const {Sequelize} = require('sequelize')
 let user = require('./db/models/model.user.js')
 let post = require('./db/models/model.post.js')
+let role = require('./db/models/model.role.js')
 require('dotenv').config()
 
 const sequelize = new Sequelize(
@@ -15,7 +16,11 @@ const sequelize = new Sequelize(
 
 let dbUser = user(sequelize)
 let dbPost = post(sequelize)
+let dbRole = role(sequelize)
 
-sequelize.sync().catch(err => console.log(err))
+sequelize.sync().catch(function (err) {
+  console.log(err)
+  procces.exit(1)
+})
 
-module.exports = {user: dbUser, post: dbPost}
+module.exports = {user: dbUser, post: dbPost, role: dbRole}
