@@ -11,7 +11,6 @@ const getUser = {
             email: {type: 'string'},
             imageURL: {type: 'string'},
             bio: {type: 'string'},
-            isAdmin: {type: 'boolean'},
           },
           required: ['userId', 'username', 'email'],
         },
@@ -34,4 +33,16 @@ const addUser = {
   },
 }
 
-module.exports = {getUser, addUser}
+const addAvatar = {
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        avatar: {type: 'string'},
+      },
+      required: ['avatar'],
+    },
+  },
+}
+
+module.exports = {getUser, addUser, addAvatar}
