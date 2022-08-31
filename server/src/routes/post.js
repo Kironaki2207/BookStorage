@@ -1,6 +1,7 @@
 const schema = require('../shemas/post')
 const {FileService} = require('../services/file.service')
 const {PostService} = require('../services/post.service')
+const {HttpBadRequest, HttpUnauthorized} = require('../errors')
 
 module.exports = async function (fastify) {
   const postService = new PostService()
@@ -9,7 +10,6 @@ module.exports = async function (fastify) {
   fastify.route({
     method: 'POST',
     path: '/posts',
-    //schema: schema.addPost,
     handler: async (request, reply) => {
       const data = await request.file()
       if (
@@ -17,10 +17,9 @@ module.exports = async function (fastify) {
         data.mimetype != 'application/fb2' &&
         data.mimetype != 'application/epub'
       ) {
-        reply.code(400)
+        throw new HttpBadRequest('invalid data type')
       } else {
-        console.log(data)
-        let url = await fileService.CreateSile(data.fieldname, data.file)
+        let url = await fileService.CreateFile(data.fieldname, data.file)
         let post = postService.add(
           data.fields.title.value,
           url,
