@@ -1,10 +1,12 @@
-const crypto = require('crypto')
+const {CryptoService} = require('../services/crypto.service')
 const jwt = require('jsonwebtoken')
 const {UserService} = require('../services/user.service')
+const {HttpBadRequest, HttpUnauthorized} = require('../errors')
 const schema = require('../shemas/user')
 
 module.exports = async function (fastify) {
   const userService = new UserService()
+  const cryptoService = new CryptoService()
 
   fastify.route({
     method: 'POST',
@@ -12,21 +14,13 @@ module.exports = async function (fastify) {
     schema: schema.addUser,
     handler: async (request, reply) => {
       if (await userService.findBy('email', request.body.email)) {
-        throw {statusCode: 201, message: 'incorrect email'}
+        throw new HttpBadRequest('this email is already in use')
       }
-      //const salt = await bcrypt.genSalt(10)
-      //const hash = await bcrypt.hash(request.body.password, salt)
-
-      const salt = crypto.randomBytes(128).toString('base64') // length = 172
-      const hash = crypto
-        .createHash('sha512')
-        .update(request.body.password)
-        .digest('hex')
-
+      const hash_password = cryptoService.hash(request.body.password)
       const user = await userService.add(
         request.body.username,
         request.body.email,
-        hash + salt
+        hash_password
       )
       reply.send(user)
     },
@@ -38,25 +32,51 @@ module.exports = async function (fastify) {
     handler: async (request, reply) => {
       let user = await userService.findBy('email', request.body.email)
       if (!user) {
-        throw {statusCode: 201, message: 'incorrect email'}
+        throw new HttpBadRequest('invalid email')
       }
-      let password = user.password.slice(0, -172)
-      const hash = crypto
-        .createHash('sha512')
-        .update(request.body.password)
-        .digest('hex')
-      //const isMatch = await bcrypt.compare(request.body.password, user.password)
-      if (hash == password) {
+      if (cryptoService.compare(request.body.password, user.password)) {
         const payload = {
           id: user.id,
           name: user.username,
           email: user.email,
         }
-        const token = jwt.sign(payload, process.env.JWT_SECRET, {
+        const accesstoken = jwt.sign(payload, process.env.JWT_SECRET, {
           expiresIn: 3600 * 24,
         })
-        reply.send({token: `Bearer ${token}`})
+        const refreshtoken = jwt.sign(payload, process.env.JWT_SECRET, {
+          expiresIn: 3600 * 24,
+        })
+        reply.send({
+          accesstoken: `Access ${accesstoken}`,
+          refreshtoken: `Refresh ${refreshtoken}`,
+        })
       }
+    },
+  })
+
+  fastify.route({
+    method: 'POST',
+    path: '/refresh',
+    schema: schema.addUser,
+    handler: async (request, reply) => {
+      const {refreshtoken} = request.headers.Authorization
+      jwt.verify(refreshtoken, process.env.JWT_SECRET, function (err) {
+        if (err) {
+          throw new HttpUnauthorized('Token is expired')
+        } else {
+          const payload = jwt.decode(refreshtoken).payload
+          const accesstoken = jwt.sign(payload, process.env.JWT_SECRET, {
+            expiresIn: 3600 * 24,
+          })
+          const refreshtoken = jwt.sign(payload, process.env.JWT_SECRET, {
+            expiresIn: 3600 * 24,
+          })
+          reply.send({
+            accesstoken: `Access ${accesstoken}`,
+            refreshtoken: `Refresh ${refreshtoken}`,
+          })
+        }
+      })
     },
   })
 }
