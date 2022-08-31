@@ -1,24 +1,11 @@
 const schema = require('../shemas/user')
 const {UserService} = require('../services/user.service')
 const {FileService} = require('../services/file.service')
+const {HttpBadRequest} = require('../errors')
 
 module.exports = async function (fastify) {
   const userService = new UserService()
   const fileService = new FileService()
-
-  fastify.route({
-    method: 'POST',
-    path: '/users',
-    schema: schema.addUser,
-    handler: async (request, reply) => {
-      const user = await userService.add(
-        request.body.username,
-        request.body.email,
-        request.body.password
-      )
-      reply.send(user)
-    },
-  })
 
   fastify.route({
     method: 'GET',
@@ -35,11 +22,19 @@ module.exports = async function (fastify) {
     path: '/users/avatar/:userId',
     schema: schema.addAvatar,
     handler: async (request, reply) => {
-      const data = await request.file()
-      const {userId} = request.params
-      url = await fileService.CreateFile(data.fieldname, data.file)
-      const user = await userService.edit(userId, url, data.fieldname)
-      reply.send(user)
+      if (
+        data.mimetype != 'image/jpg' &&
+        data.mimetype != 'image/jpeg' &&
+        data.mimetype != 'image/png'
+      ) {
+        throw new HttpBadRequest('invalid data type')
+      } else {
+        const data = await request.file()
+        const {userId} = request.params
+        const url = await fileService.CreateFile(data.fieldname, data.file)
+        const user = await userService.edit(userId, url, data.fieldname)
+        reply.send(user)
+      }
     },
   })
 
